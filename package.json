@@ -1,0 +1,26 @@
+{
+  "name": "nebula",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nebula, a personal capture & triage app. Save screenshots, links and audio, tag them, and review them on a morning dashboard.",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev:api": "node --watch --env-file=.env server/index.js",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web ci --include=dev && npm --prefix web run build",
+    "create-user": "node --env-file=.env server/scripts/create-user.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.1",
+    "express-session": "^1.19.0",
+    "multer": "^2.4.0",
+    "mysql2": "^3.24.5"
+  }
+}
