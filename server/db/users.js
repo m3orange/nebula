@@ -5,6 +5,11 @@ export async function findUserByEmail(email) {
   return rows[0] || null;
 }
 
+export async function countUsers() {
+  const [rows] = await pool.query('SELECT COUNT(*) AS n FROM users');
+  return Number(rows[0].n);
+}
+
 export async function findUserById(id) {
   const [rows] = await pool.query('SELECT id, email FROM users WHERE id = ?', [id]);
   return rows[0] || null;

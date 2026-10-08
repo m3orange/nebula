@@ -13,6 +13,7 @@
     "dev:api": "node --watch --env-file=.env server/index.js",
     "dev:web": "npm --prefix web run dev",
     "build": "npm --prefix web ci --include=dev && npm --prefix web run build",
+    "postinstall": "npm run build",
     "create-user": "node --env-file=.env server/scripts/create-user.js"
   },
   "dependencies": {

@@ -33,9 +33,10 @@ GitHub redeploys can replace the app's folder, so uploads must live somewhere el
 1. hPanel → **Websites** → your site → **Node.js** (or **Add website → Node.js app**).
 2. Connect GitHub and choose the `m3orange/nebula` repository, branch `main`.
 3. Settings:
-   - **Node version:** 20 or newer
-   - **Build command:** `npm install && npm run build`
-   - **Start command:** `npm start` (entry file: `server/index.js`)
+   - **Node version:** 22.x
+   - **Framework preset:** Express · **Package manager:** npm
+   - The React app builds automatically after `npm install` (a `postinstall` script)
+   - **Entry file:** `server/index.js`
 4. **Environment variables** (copy the names from `.env.example`):
 
    | Name | Value |
@@ -56,6 +57,10 @@ GitHub redeploys can replace the app's folder, so uploads must live somewhere el
 Every push to `main` redeploys automatically.
 
 ### d. Create your login
+**Easiest:** open the site. While no account exists, Nebula shows a **Create your account** screen. Fill it in once; after that, sign-up is closed and the screen becomes a normal sign-in.
+
+To reset a forgotten password later, use one of these:
+
 **Option 1 — SSH** (in the app's folder on the server):
 ```bash
 npm run create-user -- you@example.com "a long password"

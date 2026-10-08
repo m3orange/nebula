@@ -86,6 +86,9 @@ export const api = {
   me: () => request<{ id: string; email: string }>('/api/auth/me'),
   login: (email: string, password: string) =>
     request<{ id: string; email: string }>('/api/auth/login', { method: 'POST', body: json({ email, password }) }),
+  setupStatus: () => request<{ needsSetup: boolean }>('/api/auth/setup'),
+  setup: (email: string, password: string) =>
+    request<{ id: string; email: string }>('/api/auth/setup', { method: 'POST', body: json({ email, password }) }),
   logout: () => request('/api/auth/logout', { method: 'POST' }),
 
   tags: (q = '') => request<{ tags: Tag[] }>(`/api/tags?q=${encodeURIComponent(q)}`).then((r) => r.tags),
