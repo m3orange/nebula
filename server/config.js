@@ -26,6 +26,10 @@ export const config = {
 
   sessionSecret: required('SESSION_SECRET'),
 
+  // Optional. Lets the iOS Shortcut save entries without a browser login.
+  // Ignored unless it's at least 32 characters.
+  captureToken: (process.env.CAPTURE_TOKEN || '').length >= 32 ? process.env.CAPTURE_TOKEN : null,
+
   // Absolute path OUTSIDE the app folder, so redeploys never wipe your files.
   // Example on Hostinger: /home/u123456789/nebula-uploads
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/uploads'),

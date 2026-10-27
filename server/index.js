@@ -46,7 +46,7 @@ app.get('/api/health', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 app.use('/api/auth', authRoutes);
-app.use('/api/entries', requireAuth, entryRoutes);
+app.use('/api/entries', entryRoutes); // auth is applied inside (capture token allowed for POST / only)
 app.use('/api/tags', requireAuth, tagRoutes);
 app.use('/api/tasks', requireAuth, taskRoutes);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
@@ -56,7 +56,7 @@ app.get(
   '/files/:assetId',
   requireAuth,
   wrap(async (req, res) => {
-    const asset = await getAsset(req.session.userId, req.params.assetId);
+    const asset = await getAsset(req.userId, req.params.assetId);
     if (!asset) return res.status(404).end();
     res.type(asset.mime_type);
     res.set('Cache-Control', 'private, max-age=86400');
@@ -79,10 +79,14 @@ app.use((err, req, res, next) => {
     const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
     const message =
       err.code === 'LIMIT_FILE_SIZE' ? `File is larger than ${config.maxUploadMb} MB` : err.message;
+    if (req.query.reply === 'text') return res.status(status).type('text').send(`✗ ${message}`);
     return res.status(status).json({ error: message });
   }
   const status = err.status || 500;
   if (status >= 500) console.error(err);
+  if (req.query.reply === 'text') {
+    return res.status(status).type('text').send(`✗ ${status >= 500 ? 'Something went wrong on the server' : err.message}`);
+  }
   res.status(status).json({ error: status >= 500 ? 'Something went wrong on the server' : err.message });
 });
 

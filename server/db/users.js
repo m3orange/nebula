@@ -5,6 +5,12 @@ export async function findUserByEmail(email) {
   return rows[0] || null;
 }
 
+/** The app's owner: the first account created. Used by the capture token. */
+export async function findOwnerId() {
+  const [rows] = await pool.query('SELECT id FROM users ORDER BY created_at ASC LIMIT 1');
+  return rows[0]?.id || null;
+}
+
 export async function countUsers() {
   const [rows] = await pool.query('SELECT COUNT(*) AS n FROM users');
   return Number(rows[0].n);

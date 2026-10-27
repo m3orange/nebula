@@ -8,7 +8,7 @@ const router = Router();
 router.get(
   '/',
   wrap(async (req, res) => {
-    const tags = await listTags(req.session.userId, String(req.query.q || '').slice(0, 64));
+    const tags = await listTags(req.userId, String(req.query.q || '').slice(0, 64));
     res.json({ tags });
   }),
 );

@@ -85,15 +85,29 @@ Then in phpMyAdmin → `users` → **Insert**:
 1. Open your site in **Safari** and sign in.
 2. Share button → **Add to Home Screen**. It opens full-screen like an app.
 
-### Save links from any app's share sheet (optional iOS Shortcut)
-Web apps can't appear in the iPhone share sheet, but a Shortcut can open Nebula with the link already filled in:
+### Save from any app's share sheet (iOS Shortcut)
+Web apps can't appear in the iPhone share sheet, but a Shortcut can, and it can send straight to Nebula's API.
 
-1. **Shortcuts** app → **+** → name it *Save to Nebula*.
-2. Tap the **ⓘ** (details) → turn on **Show in Share Sheet**, accepting **URLs** and **Safari web pages**.
-3. Add the action **URL**: `https://your-domain/capture?url=` then insert the **Shortcut Input** variable at the end.
-4. Add the action **Open URLs**.
+1. Make a capture key on your Mac: `openssl rand -hex 32`
+2. Add it on Hostinger as the environment variable `CAPTURE_TOKEN`, then **Redeploy**.
+3. In the Shortcut, use **Get Contents of URL**:
+   - URL: `https://mynebula.cloud/api/entries?reply=text`
+   - Method: **POST**
+   - Header: `Authorization` = `Bearer <your key>`
+   - Request Body: **Form**, with any of these fields:
 
-Now *Share → Save to Nebula* from YouTube, TikTok, Safari, etc. opens the capture screen with the link in place. For screenshots, use **Photos & files** inside Nebula (a later release can make the Shortcut upload images too).
+   | Field | Type | Value |
+   |---|---|---|
+   | `files` | File | the image (convert to JPEG first) |
+   | `url` | Text | the shared link |
+   | `whySaved` | Text | your note |
+   | `tags` | Text | comma-separated, e.g. `ai, tools` |
+   | `intent` | Text | Watch / Read / Try / Research / Reference |
+   | `onDashboard` | Text | `false` to skip the dashboard (default: on) |
+
+   With `?reply=text`, Nebula answers with a one-line message ("✓ Saved 1 entry to Nebula" or "✗ …") for a notification.
+
+The key can **only create entries**. It can't read, edit or delete anything. If your phone is lost, change `CAPTURE_TOKEN` on Hostinger (and redeploy) and the old key stops working.
 
 ---
 

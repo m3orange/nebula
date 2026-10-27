@@ -10,7 +10,7 @@ import {
   listEntries,
   updateEntry,
 } from '../db/entries.js';
-import { wrap } from '../middleware/auth.js';
+import { requireAuth, requireCaptureAuth, wrap } from '../middleware/auth.js';
 import { discardFiles, toAsset, upload } from '../storage.js';
 
 const router = Router();
@@ -57,16 +57,31 @@ function cleanUrl(v) {
   }
 }
 
+function sendError(req, res, status, message) {
+  if (req.query.reply === 'text') return res.status(status).type('text').send(`✗ ${message}`);
+  return res.status(status).json({ error: message });
+}
+
+/** Tags as a JSON array (web app) or plain text "ai, tools" / one per line (iOS Shortcut). */
+function readTags(v) {
+  if (Array.isArray(v)) return v;
+  const s = String(v ?? '').trim();
+  if (!s) return [];
+  if (s.startsWith('[')) return parseJson(s, []);
+  return s.split(/[,\n]+/).map((t) => t.trim()).filter(Boolean);
+}
+
 /** Shared details from the form, validated. */
 function readDetails(src) {
-  const intent = src.intent && INTENTS.includes(src.intent) ? src.intent : null;
+  const intentRaw = String(src.intent || '').trim().toLowerCase();
+  const intent = INTENTS.includes(intentRaw) ? intentRaw : null;
   const extractMode = EXTRACT_MODES.includes(src.extractMode) ? src.extractMode : 'text';
   return {
     title: String(src.title || '').trim().slice(0, 255) || null,
     whySaved: String(src.whySaved || '').trim() || null,
     intent,
     extractMode,
-    tags: Array.isArray(src.tags) ? src.tags : parseJson(src.tags, []),
+    tags: readTags(src.tags),
   };
 }
 
@@ -84,6 +99,7 @@ function readDetails(src) {
  */
 router.post(
   '/',
+  requireCaptureAuth, // browser session, or the iOS Shortcut's capture token
   upload.array('files', 20),
   wrap(async (req, res) => {
     const files = req.files || [];
@@ -97,7 +113,7 @@ router.post(
       const itemsMeta = parseJson(req.body.itemsMeta, []);
 
       if (files.length === 0 && !url && !shared.whySaved && !shared.title) {
-        return res.status(400).json({ error: 'Add a file, a link, or a note' });
+        return sendError(req, res, 400, 'Add a file, a link, or a note');
       }
 
       const ids = await transaction(async (conn) => {
@@ -107,7 +123,7 @@ router.post(
         if (files.length === 0) {
           const contentType = url ? contentTypeForLink(url) : 'note';
           return [
-            await insertEntry(conn, req.session.userId, { ...base, ...shared, contentType, extractMode: 'none' }, [], shared.tags),
+            await insertEntry(conn, req.userId, { ...base, ...shared, contentType, extractMode: 'none' }, [], shared.tags),
           ];
         }
 
@@ -120,7 +136,7 @@ router.post(
           return [
             await insertEntry(
               conn,
-              req.session.userId,
+              req.userId,
               { ...base, ...shared, contentType, extractMode },
               assets,
               shared.tags,
@@ -129,7 +145,7 @@ router.post(
         }
 
         // Several files as separate entries, optionally linked in one session.
-        const sessionId = saveAs === 'linked' ? await createSession(conn, req.session.userId) : null;
+        const sessionId = saveAs === 'linked' ? await createSession(conn, req.userId) : null;
         const created = [];
         for (const [i, file] of files.entries()) {
           const own = itemsMeta[i] ? readDetails({ ...req.body, ...itemsMeta[i] }) : shared;
@@ -138,7 +154,7 @@ router.post(
           created.push(
             await insertEntry(
               conn,
-              req.session.userId,
+              req.userId,
               { ...base, ...own, contentType, extractMode, sessionId },
               [assets[i]],
               own.tags,
@@ -148,7 +164,12 @@ router.post(
         return created;
       });
 
-      const entries = await Promise.all(ids.map((id) => getEntry(req.session.userId, id)));
+      const entries = await Promise.all(ids.map((id) => getEntry(req.userId, id)));
+      if (req.query.reply === 'text') {
+        // Friendly one-liner for the iOS Shortcut's notification
+        const n = entries.length;
+        return res.status(201).type('text').send(`✓ Saved ${n === 1 ? '1 entry' : `${n} entries`} to Nebula`);
+      }
       res.status(201).json({ entries });
     } catch (err) {
       discardFiles(files);
@@ -157,12 +178,15 @@ router.post(
   }),
 );
 
+// Everything below needs a signed-in browser session; the capture token can't read or change anything.
+router.use(requireAuth);
+
 /** List entries. Query: dashboard=1, tag, intent, status, q, limit */
 router.get(
   '/',
   wrap(async (req, res) => {
     const { tag, intent, status, q, limit } = req.query;
-    const entries = await listEntries(req.session.userId, {
+    const entries = await listEntries(req.userId, {
       dashboard: bool(req.query.dashboard),
       tag: tag ? String(tag).replace(/^#/, '').toLowerCase() : null,
       intent: INTENTS.includes(intent) ? intent : null,
@@ -177,7 +201,7 @@ router.get(
 router.get(
   '/:id',
   wrap(async (req, res) => {
-    const entry = await getEntry(req.session.userId, req.params.id);
+    const entry = await getEntry(req.userId, req.params.id);
     if (!entry) return res.status(404).json({ error: 'Not found' });
     res.json({ entry });
   }),
@@ -208,9 +232,9 @@ router.patch(
     if ('listenOnlyOk' in b) patch.listenOnlyOk = Boolean(b.listenOnlyOk);
     if (Array.isArray(b.tags)) patch.tags = b.tags;
 
-    const found = await transaction((conn) => updateEntry(conn, req.session.userId, req.params.id, patch));
+    const found = await transaction((conn) => updateEntry(conn, req.userId, req.params.id, patch));
     if (!found) return res.status(404).json({ error: 'Not found' });
-    res.json({ entry: await getEntry(req.session.userId, req.params.id) });
+    res.json({ entry: await getEntry(req.userId, req.params.id) });
   }),
 );
 

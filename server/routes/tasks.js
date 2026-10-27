@@ -13,7 +13,7 @@ function validDate(v) {
 router.get(
   '/',
   wrap(async (req, res) => {
-    res.json({ tasks: await listTasks(req.session.userId) });
+    res.json({ tasks: await listTasks(req.userId) });
   }),
 );
 
@@ -25,7 +25,7 @@ router.post(
     if (!title) return res.status(400).json({ error: 'A task needs a title' });
     const dueAt = validDate(req.body.dueAt);
     if (dueAt === undefined) return res.status(400).json({ error: 'Invalid due date' });
-    const id = await createTask(req.session.userId, {
+    const id = await createTask(req.userId, {
       title,
       notes: req.body.notes,
       dueAt,
@@ -51,7 +51,7 @@ router.patch(
       if (patch.dueAt === undefined) return res.status(400).json({ error: 'Invalid due date' });
     }
     if ('done' in b) patch.done = Boolean(b.done);
-    const ok = await updateTask(req.session.userId, req.params.id, patch);
+    const ok = await updateTask(req.userId, req.params.id, patch);
     if (!ok) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   }),
@@ -60,7 +60,7 @@ router.patch(
 router.delete(
   '/:id',
   wrap(async (req, res) => {
-    const ok = await deleteTask(req.session.userId, req.params.id);
+    const ok = await deleteTask(req.userId, req.params.id);
     if (!ok) return res.status(404).json({ error: 'Not found' });
     res.json({ ok: true });
   }),
