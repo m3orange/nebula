@@ -49,6 +49,32 @@ export function toAsset(file) {
   };
 }
 
+/**
+ * Save an in-memory file (e.g. an email attachment) the same way uploads are
+ * saved. Returns the entry_assets shape, or null if the type isn't allowed.
+ */
+export async function saveBuffer(buffer, originalName, mimeType) {
+  if (!ALLOWED.test(mimeType || '')) return null;
+  if (buffer.length > config.maxUploadMb * 1024 * 1024) {
+    throw Object.assign(new Error(`${originalName || 'Attachment'} is larger than ${config.maxUploadMb} MB`), {
+      status: 413,
+    });
+  }
+  const d = new Date();
+  const rel = path.join(String(d.getUTCFullYear()), String(d.getUTCMonth() + 1).padStart(2, '0'));
+  await fs.promises.mkdir(path.join(config.uploadDir, rel), { recursive: true });
+  const id = newId();
+  const relPath = path.join(rel, id + safeExtension(originalName, mimeType));
+  await fs.promises.writeFile(path.join(config.uploadDir, relPath), buffer);
+  return {
+    id,
+    path: relPath.split(path.sep).join('/'),
+    originalName: originalName?.slice(0, 255) || null,
+    mimeType,
+    sizeBytes: buffer.length,
+  };
+}
+
 /** Absolute path for a stored relative path, refusing anything that escapes UPLOAD_DIR. */
 export function absolutePath(relPath) {
   const abs = path.resolve(config.uploadDir, relPath);
@@ -59,4 +85,9 @@ export function absolutePath(relPath) {
 /** Remove files from a request that failed, so nothing is left orphaned. */
 export function discardFiles(files = []) {
   for (const f of files) fs.unlink(f.path, () => {});
+}
+
+/** Remove saved assets (relative paths) after a failed save. */
+export function discardAssets(assets = []) {
+  for (const a of assets) fs.unlink(path.join(config.uploadDir, a.path), () => {});
 }

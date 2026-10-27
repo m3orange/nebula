@@ -85,6 +85,38 @@ Then in phpMyAdmin → `users` → **Insert**:
 1. Open your site in **Safari** and sign in.
 2. Share button → **Add to Home Screen**. It opens full-screen like an app.
 
+### Save by email
+Email anything to your capture mailbox and it shows up in Nebula within a few minutes.
+
+**Setup (once):**
+1. hPanel → **Emails** → create a mailbox on mynebula.cloud. Pick a name that's hard to guess (e.g. `save-k7q2@mynebula.cloud`), since it's the address you'll send to.
+2. Add these environment variables to the Node.js app, then **Redeploy**:
+   - `MAIL_USER`: the full mailbox address
+   - `MAIL_PASSWORD`: its password
+   - `MAIL_ALLOWED_FROM`: the addresses you send from, comma-separated, e.g. `michelle@m3orange.me, me@gmail.com`
+3. Save the mailbox as a contact called **Nebula** on your phone.
+4. Test: while signed in, open `https://mynebula.cloud/api/mail/check` to check the mailbox right away. It shows how many emails were saved, rejected, or failed, or a plain-English error if the mailbox settings are wrong.
+
+**How to write the email:**
+
+| Put this… | …and Nebula does this |
+|---|---|
+| Subject | becomes "why I saved this" |
+| `#tags` (subject or body) | tags, e.g. `#ai #tools` |
+| `#watch` `#read` `#try` `#research` `#reference` | sets the intent |
+| `#nodash` | keeps it off the dashboard |
+| Attachments (screenshots, PDFs, voice notes, videos) | one entry each, linked together if several |
+| Links, with no attachments | one entry each |
+| Links **with** attachments | the first link becomes the attachments' source link |
+| Any other text | added to "why I saved this" |
+
+Signatures ("Sent from my iPhone") and quoted replies are ignored.
+
+**Where emails go afterwards** (folders in the mailbox, so nothing is processed twice):
+- `Nebula Processed`: saved
+- `Nebula Rejected`: not from an allowed address, or failed the sender check
+- `Nebula Failed`: nothing to save (e.g. empty email) or an error
+
 ### Save from any app's share sheet (iOS Shortcut)
 Web apps can't appear in the iPhone share sheet, but a Shortcut can, and it can send straight to Nebula's API.
 

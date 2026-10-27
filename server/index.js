@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import entryRoutes from './routes/entries.js';
 import tagRoutes from './routes/tags.js';
 import taskRoutes from './routes/tasks.js';
+import { checkMailbox, lastMailCheck, startMailPoller } from './mail/poller.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webDist = path.resolve(here, '../web/dist');
@@ -49,6 +50,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/entries', entryRoutes); // auth is applied inside (capture token allowed for POST / only)
 app.use('/api/tags', requireAuth, tagRoutes);
 app.use('/api/tasks', requireAuth, taskRoutes);
+// Email capture: open /api/mail/check in the browser (while signed in) to check the mailbox right now.
+app.get('/api/mail/check', requireAuth, async (req, res) => {
+  try {
+    res.json(await checkMailbox());
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+app.get('/api/mail/status', requireAuth, (req, res) => res.json(lastMailCheck() || { checkedAt: null }));
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 // --- Files (only for the signed-in owner) ---
@@ -92,4 +102,5 @@ app.use((err, req, res, next) => {
 
 app.listen(config.port, () => {
   console.log(`Nebula listening on port ${config.port}`);
+  startMailPoller();
 });
